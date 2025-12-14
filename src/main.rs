@@ -61,7 +61,7 @@ async fn main() {
 
 async fn root() -> Json<serde_json::Value> {
     Json(serde_json::json!({
-        "message": "Kimai ML API (Rust)",
+        "message": "Kimai ML API",
         "version": "0.1.0"
     }))
 }
