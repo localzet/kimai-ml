@@ -2,9 +2,10 @@
 name = "kimai-ml"
 version = "0.1.0"
 edition = "2021"
-authors = ["localzet"]
+authors = ["Localzet Group"]
 description = "ML models for Kimai Aggregator (Rust version)"
-license = "MIT"
+license = "AGPL-3.0"
+repository = "https://github.com/localzet/kimai-ml-rust"
 
 [lib]
 name = "kimai_ml"
