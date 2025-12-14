@@ -1,19 +1,16 @@
 /// Генератор рекомендаций по оптимизации
 
-use ndarray::{Array1, Array2};
-use linfa::prelude::*;
-use linfa_clustering::KMeans;
 use std::collections::HashMap;
 
 use crate::types::{MLInputData, RecommendationOutput, Project};
 
 pub struct RecommendationEngine {
-    kmeans: Option<KMeans<f64, bool>>,
+    // KMeans не используется, используем простую эвристику
 }
 
 impl RecommendationEngine {
     pub fn new() -> Self {
-        Self { kmeans: None }
+        Self {}
     }
 
     pub fn generate_recommendations(&mut self, data: &MLInputData) -> Vec<RecommendationOutput> {
@@ -57,78 +54,47 @@ impl RecommendationEngine {
             return projects.iter().map(|p| (p.id, 0)).collect();
         }
 
-        // Подготовка признаков
-        let mut features = Vec::new();
+        // Подготовка признаков для кластеризации
         let mut project_ids = Vec::new();
+        let mut total_hours_vec = Vec::new();
+        let mut weekly_hours_vec = Vec::new();
 
         for project in projects {
-            features.push(vec![
-                project.total_hours,
-                project.avg_hours_per_week,
-                project.weeks_count as f64,
-            ]);
             project_ids.push(project.id);
+            total_hours_vec.push(project.total_hours);
+            weekly_hours_vec.push(project.avg_hours_per_week);
         }
 
-        // Нормализация
-        let n_features = 3;
-        let n_samples = features.len();
-        let mut features_array = Array2::zeros((n_samples, n_features));
-
-        for (i, feat) in features.iter().enumerate() {
-            for (j, val) in feat.iter().enumerate() {
-                features_array[[i, j]] = *val;
-            }
-        }
-
-        // Среднее и стандартное отклонение
-        let mean: Vec<f64> = (0..n_features)
-            .map(|j| {
-                (0..n_samples).map(|i| features_array[[i, j]]).sum::<f64>() / n_samples as f64
-            })
-            .collect();
-
-        let std: Vec<f64> = (0..n_features)
-            .map(|j| {
-                let variance = (0..n_samples)
-                    .map(|i| (features_array[[i, j]] - mean[j]).powi(2))
-                    .sum::<f64>()
-                    / n_samples as f64;
-                variance.sqrt().max(1e-10)
-            })
-            .collect();
-
-        // Нормализация
-        for i in 0..n_samples {
-            for j in 0..n_features {
-                features_array[[i, j]] = (features_array[[i, j]] - mean[j]) / std[j];
-            }
-        }
-
-        // Кластеризация через KMeans
-        let n_clusters = projects.len().min(3);
-        if n_clusters > 0 && n_samples > 0 {
-            // Создаем dataset для кластеризации
-            // KMeans требует правильный формат данных
-            let dataset = Dataset::new(features_array.clone(), Array1::zeros(n_samples));
+        // Упрощенная кластеризация на основе средних значений
+        // Разделяем проекты на группы по размеру (малые/средние/большие)
+        let mut clusters = HashMap::new();
+        
+        if !total_hours_vec.is_empty() {
+            // Вычисляем средние значения признаков
+            let avg_total_hours: f64 = total_hours_vec.iter().sum::<f64>() / total_hours_vec.len() as f64;
             
-            match KMeans::params(n_clusters).fit(&dataset) {
-                Ok(model) => {
-                    let clusters = model.predict(&dataset);
-                    project_ids
-                        .iter()
-                        .zip(clusters.targets().iter())
-                        .map(|(&id, cluster)| (id, *cluster as usize))
-                        .collect()
-                }
-                Err(_) => {
-                    // Fallback: все в один кластер
-                    project_ids.iter().map(|&id| (id, 0)).collect()
-                }
+            for (idx, project_id) in project_ids.iter().enumerate() {
+                let total_hours = total_hours_vec[idx];
+                
+                // Простая кластеризация: 0 = малые, 1 = средние, 2 = большие
+                let cluster = if total_hours < avg_total_hours * 0.5 {
+                    0 // Малые проекты
+                } else if total_hours > avg_total_hours * 1.5 {
+                    2 // Большие проекты
+                } else {
+                    1 // Средние проекты
+                };
+                
+                clusters.insert(*project_id, cluster);
             }
         } else {
-            project_ids.iter().map(|&id| (id, 0)).collect()
+            // Fallback: все в один кластер
+            for project_id in project_ids {
+                clusters.insert(project_id, 0);
+            }
         }
+        
+        clusters
     }
 
     fn analyze_time_distribution(&self, weeks: &[crate::types::WeekData]) -> HashMap<i32, f64> {
