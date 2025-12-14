@@ -12,12 +12,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Копирование файлов зависимостей
-COPY Cargo.toml Cargo.lock ./
-
-# Создание dummy src для кэширования зависимостей
-RUN mkdir src && echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src
+COPY Cargo.toml ./
 
 # Копирование исходного кода
 COPY src ./src
