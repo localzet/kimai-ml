@@ -2,10 +2,11 @@
 name = "kimai-ml"
 version = "0.1.0"
 edition = "2021"
-authors = ["Localzet Group"]
+authors = ["Ivan Zorin <creator@localzet.com>"]
 description = "ML models for Kimai Aggregator (Rust version)"
 license = "AGPL-3.0"
 repository = "https://github.com/localzet/kimai-ml-rust"
+homepage = "https://github.com/localzet"
 
 [lib]
 name = "kimai_ml"
