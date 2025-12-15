@@ -2,11 +2,12 @@
 
 use axum::{
     extract::State,
-    http::Method,
+    http::{Method, StatusCode},
     response::Json,
     routing::{get, post},
     Router,
 };
+use serde::Deserialize;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber;
 
@@ -234,7 +235,7 @@ async fn get_recommendations(
 }
 
 async fn analyze_productivity(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(data): Json<MLInputData>,
 ) -> Result<Json<MLOutputData>, String> {
     tracing::info!("Productivity analysis request: {} entries", data.timesheets.len());
@@ -283,15 +284,15 @@ struct LearnRequest {
 }
 
 async fn learn_from_error(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<LearnRequest>,
-) -> Result<Json<serde_json::Value>, String> {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     tracing::info!("Learning from error: {} predicted={}, actual={}", 
         req.prediction_type, req.predicted_value, req.actual_value);
 
     let error = req.predicted_value - req.actual_value;
     
-    let mut learning = state.learning_module.lock().await;
+    let mut learning = _state.learning_module.lock().await;
     learning.record_error(kimai_ml::PredictionError {
         prediction_type: req.prediction_type.clone(),
         predicted_value: req.predicted_value,
