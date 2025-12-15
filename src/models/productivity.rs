@@ -1,4 +1,4 @@
-/// Анализ продуктивности
+//! Анализ продуктивности
 
 use std::collections::HashMap;
 use chrono::DateTime;
@@ -9,11 +9,17 @@ pub struct ProductivityAnalyzer {
     preferences: Option<UserPreferences>,
 }
 
-impl ProductivityAnalyzer {
-    pub fn new() -> Self {
+impl Default for ProductivityAnalyzer {
+    fn default() -> Self {
         Self {
             preferences: None,
         }
+    }
+}
+
+impl ProductivityAnalyzer {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn with_preferences(preferences: Option<UserPreferences>) -> Self {
@@ -120,10 +126,8 @@ impl ProductivityAnalyzer {
                         if e.hour >= no_work_start && e.hour < sleep_start {
                             return false;
                         }
-                    } else {
-                        if e.hour >= no_work_start || e.hour < sleep_start {
-                            return false;
-                        }
+                    } else if e.hour >= no_work_start || e.hour < sleep_start {
+                        return false;
                     }
                 }
                 true
@@ -205,7 +209,7 @@ impl ProductivityAnalyzer {
         let mut daily_entries: HashMap<String, Vec<&TimesheetEntry>> = HashMap::new();
         for entry in entries {
             if let Some(date_key) = entry.begin.split('T').next() {
-                daily_entries.entry(date_key.to_string()).or_insert_with(Vec::new).push(entry);
+                daily_entries.entry(date_key.to_string()).or_default().push(entry);
             }
         }
 
@@ -253,6 +257,7 @@ impl ProductivityAnalyzer {
 }
 
 struct Session {
+    #[allow(dead_code)]
     start: String,
     end: String,
     duration: i32,

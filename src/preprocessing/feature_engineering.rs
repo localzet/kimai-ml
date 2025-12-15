@@ -1,4 +1,4 @@
-/// Feature engineering для ML моделей
+//! Feature engineering для ML моделей
 
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
@@ -98,7 +98,7 @@ impl FeatureEngineer {
         let mut project_durations: HashMap<i32, Vec<i32>> = HashMap::new();
         for entry in entries {
             if let Some(project_id) = entry.project_id {
-                project_durations.entry(project_id).or_insert_with(Vec::new).push(entry.duration);
+                project_durations.entry(project_id).or_default().push(entry.duration);
             }
         }
 

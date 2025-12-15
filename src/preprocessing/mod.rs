@@ -1,4 +1,4 @@
-/// Модуль предобработки данных
+//! Модуль предобработки данных
 
 pub mod feature_engineering;
 pub mod normalization;

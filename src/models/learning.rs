@@ -1,4 +1,4 @@
-/// Обучение на ошибках - улучшение моделей на основе фактических результатов
+//! Обучение на ошибках - улучшение моделей на основе фактических результатов
 
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -96,7 +96,7 @@ impl LearningModule {
         if avg_error > 0.0 {
             let coefficient_of_variation = std_dev / avg_error;
             // Нормализуем к диапазону [0.5, 1.0]
-            (1.0 / (1.0 + coefficient_of_variation)).max(0.5).min(1.0)
+            (1.0 / (1.0 + coefficient_of_variation)).clamp(0.5, 1.0)
         } else {
             1.0
         }
@@ -110,7 +110,7 @@ impl LearningModule {
         for error in &self.errors {
             errors_by_type
                 .entry(error.prediction_type.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(error.error.abs());
         }
 
