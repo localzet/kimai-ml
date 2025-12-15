@@ -13,7 +13,7 @@ use tracing_subscriber;
 
 use kimai_ml::{
     types::{MLInputData, MLOutputData},
-    ForecastingModel, AnomalyDetector, RecommendationEngine, ProductivityAnalyzer, LearningModule,
+    ForecastingModel, AnomalyDetector, RecommendationEngine, LearningModule,
 };
 
 #[derive(Clone)]
@@ -21,8 +21,6 @@ struct AppState {
     forecasting_model: std::sync::Arc<tokio::sync::Mutex<ForecastingModel>>,
     anomaly_detector: std::sync::Arc<tokio::sync::Mutex<AnomalyDetector>>,
     recommendation_engine: std::sync::Arc<tokio::sync::Mutex<RecommendationEngine>>,
-    #[allow(dead_code)]
-    productivity_analyzer: std::sync::Arc<tokio::sync::Mutex<ProductivityAnalyzer>>,
     learning_module: std::sync::Arc<tokio::sync::Mutex<LearningModule>>,
 }
 
@@ -37,7 +35,6 @@ async fn main() {
         forecasting_model: std::sync::Arc::new(tokio::sync::Mutex::new(ForecastingModel::new())),
         anomaly_detector: std::sync::Arc::new(tokio::sync::Mutex::new(AnomalyDetector::new(0.1))),
         recommendation_engine: std::sync::Arc::new(tokio::sync::Mutex::new(RecommendationEngine::new())),
-        productivity_analyzer: std::sync::Arc::new(tokio::sync::Mutex::new(ProductivityAnalyzer::new())),
         learning_module: std::sync::Arc::new(tokio::sync::Mutex::new(LearningModule::new(1000))),
     };
 

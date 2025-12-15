@@ -87,7 +87,7 @@ impl FeatureEngineer {
         Ok((features, targets))
     }
 
-    //! Извлечение признаков для обнаружения аномалий
+    /// Извлечение признаков для обнаружения аномалий
     pub fn extract_anomaly_features(entries: &[TimesheetEntry]) -> Array2<f64> {
         if entries.is_empty() {
             return Array2::zeros((0, 5));
