@@ -5,16 +5,9 @@ use chrono::DateTime;
 
 use crate::types::{TimesheetEntry, ProductivityOutput, OptimalWorkHours, BreakRecommendations, EfficiencyPoint, UserPreferences};
 
+#[derive(Default)]
 pub struct ProductivityAnalyzer {
     preferences: Option<UserPreferences>,
-}
-
-impl Default for ProductivityAnalyzer {
-    fn default() -> Self {
-        Self {
-            preferences: None,
-        }
-    }
 }
 
 impl ProductivityAnalyzer {
