@@ -8,7 +8,7 @@ use crate::types::{TimesheetEntry, WeekData};
 pub struct FeatureEngineer;
 
 impl FeatureEngineer {
-    /// Извлечение временных признаков из недель
+    //! Извлечение временных признаков из недель
     pub fn extract_temporal_features(weeks: &[WeekData]) -> Result<(Array2<f64>, Array1<f64>), String> {
         if weeks.is_empty() {
             return Err("No weeks provided".to_string());
@@ -87,7 +87,7 @@ impl FeatureEngineer {
         Ok((features, targets))
     }
 
-    /// Извлечение признаков для обнаружения аномалий
+    //! Извлечение признаков для обнаружения аномалий
     pub fn extract_anomaly_features(entries: &[TimesheetEntry]) -> Array2<f64> {
         if entries.is_empty() {
             return Array2::zeros((0, 5));

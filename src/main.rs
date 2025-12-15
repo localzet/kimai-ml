@@ -1,4 +1,4 @@
-/// API сервер для ML моделей
+//! API сервер для ML моделей
 
 use axum::{
     extract::State,
@@ -21,6 +21,7 @@ struct AppState {
     forecasting_model: std::sync::Arc<tokio::sync::Mutex<ForecastingModel>>,
     anomaly_detector: std::sync::Arc<tokio::sync::Mutex<AnomalyDetector>>,
     recommendation_engine: std::sync::Arc<tokio::sync::Mutex<RecommendationEngine>>,
+    #[allow(dead_code)]
     productivity_analyzer: std::sync::Arc<tokio::sync::Mutex<ProductivityAnalyzer>>,
     learning_module: std::sync::Arc<tokio::sync::Mutex<LearningModule>>,
 }

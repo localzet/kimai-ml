@@ -6,7 +6,7 @@ use ndarray::{Array1, Array2, s};
 use crate::preprocessing::{FeatureEngineer, DataNormalizer};
 use crate::types::{WeekData, ForecastingOutput};
 
-/// Упрощенная Ridge Regression
+//! Упрощенная Ridge Regression
 struct SimpleRidge {
     alpha: f64,
     weights: Option<Array1<f64>>,
@@ -155,7 +155,7 @@ impl SimpleRidge {
     }
 }
 
-/// Упрощенный Decision Tree (регрессия)
+//! Упрощенный Decision Tree (регрессия)
 struct SimpleTree {
     max_depth: usize,
     min_samples_split: usize,

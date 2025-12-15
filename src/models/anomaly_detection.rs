@@ -5,7 +5,7 @@ use ndarray::Array2;
 use crate::preprocessing::FeatureEngineer;
 use crate::types::{TimesheetEntry, AnomalyOutput};
 
-/// Упрощенный Isolation Forest
+//! Упрощенный Isolation Forest
 pub struct IsolationForest {
     n_trees: usize,
     max_samples: usize,
