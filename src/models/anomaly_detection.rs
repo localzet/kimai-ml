@@ -191,12 +191,21 @@ impl AnomalyDetector {
         // Нормализация scores к [0, 1]
         let min_score = scores.iter().copied().fold(f64::INFINITY, f64::min);
         let max_score = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        let score_range = (max_score - min_score).max(1e-10);
+        let score_range = max_score - min_score;
 
-        let normalized_scores: Vec<f64> = scores
-            .iter()
-            .map(|s| 1.0 - (s - min_score) / score_range)
-            .collect();
+        let normalized_scores: Vec<f64> = if score_range.abs() < 1e-12 {
+            // All scores equal — treat as non-anomalous (uniform)
+            scores.iter().map(|_| 0.0).collect()
+        } else {
+            scores
+                .iter()
+                .map(|s| {
+                    let v = 1.0 - (s - min_score) / score_range;
+                    // clamp
+                    v.max(0.0).min(1.0)
+                })
+                .collect()
+        };
 
         let mut anomalies = Vec::new();
 

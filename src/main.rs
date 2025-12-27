@@ -91,7 +91,7 @@ async fn predict(
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    let include_weekends = data
+    let _include_weekends = data
         .options
         .as_ref()
         .and_then(|o| o.get("include_weekends"))
@@ -105,7 +105,7 @@ async fn predict(
         .and_then(|v| v.as_i64())
         .map(|v| v as usize);
 
-    let confidence_threshold = data
+    let _confidence_threshold = data
         .options
         .as_ref()
         .and_then(|o| o.get("confidence_threshold"))
