@@ -59,7 +59,15 @@ async fn main() {
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8000));
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     tracing::info!("Server listening on http://0.0.0.0:8000");
-    axum::serve(listener, app).await.unwrap();
+        // Start gRPC server in background (addr: 50051)
+        let grpc_addr = std::net::SocketAddr::from(([0, 0, 0, 0], 50051));
+        let _grpc = tokio::spawn(async move {
+            if let Err(e) = kimai_ml::grpc_server::start_grpc_server(grpc_addr).await {
+                tracing::error!("gRPC server error: {}", e);
+            }
+        });
+
+        axum::serve(listener, app).await.unwrap();
 }
 
 async fn root() -> Json<serde_json::Value> {
