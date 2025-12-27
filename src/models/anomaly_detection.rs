@@ -202,7 +202,7 @@ impl AnomalyDetector {
                 .map(|s| {
                     let v = 1.0 - (s - min_score) / score_range;
                     // clamp
-                    v.max(0.0).min(1.0)
+                    v.clamp(0.0, 1.0)
                 })
                 .collect()
         };
