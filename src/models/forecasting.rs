@@ -5,6 +5,7 @@
 use crate::preprocessing::{DataNormalizer, FeatureEngineer};
 use crate::types::{ForecastingOutput, WeekData};
 use ndarray::{s, Array1, Array2};
+use serde_json::Value as JsonValue;
 
 /// Упрощенная Ridge Regression
 struct SimpleRidge {
@@ -367,6 +368,79 @@ impl ForecastingModel {
                 .mean()
                 .unwrap_or(0.0);
             tracing::info!("Forecasting model trained. MAE: {:.2}", mae);
+        }
+
+        Ok(())
+    }
+
+    /// Train with optional JSON options (hyperparameters)
+    pub fn train_with_options(
+        &mut self,
+        weeks: &[WeekData],
+        options: Option<&JsonValue>,
+    ) -> Result<(), String> {
+        if weeks.len() < 8 {
+            return Err("Need at least 8 weeks of data for training".to_string());
+        }
+
+        // parse hyperparameters
+        let linear_alpha = options
+            .and_then(|o| o.get("linear_alpha"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.0);
+
+        let tree_max_depth = options
+            .and_then(|o| o.get("tree_max_depth"))
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(10);
+
+        let min_samples_split = options
+            .and_then(|o| o.get("min_samples_split"))
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(5);
+
+        // Извлечение признаков
+        let (X, y) = FeatureEngineer::extract_temporal_features(weeks)?;
+
+        // Разделение на train/test (80/20)
+        let split_idx = (X.nrows() as f64 * 0.8) as usize;
+        let X_train = X.slice(s![..split_idx, ..]).to_owned();
+        let X_test = X.slice(s![split_idx.., ..]).to_owned();
+        let y_train = y.slice(s![..split_idx]).to_owned();
+        let y_test = y.slice(s![split_idx..]).to_owned();
+
+        // Нормализация
+        let X_train_scaled = self.normalizer.fit_transform(&X_train)?;
+        let X_test_scaled = self.normalizer.transform(&X_test)?;
+
+        // Обучение Decision Tree with parameters
+        let mut tree = SimpleTree::new(tree_max_depth, min_samples_split);
+        tree.fit(&X_train_scaled, &y_train)?;
+        self.tree_model = Some(tree);
+
+        // Обучение Linear Model (Ridge) with alpha
+        let mut linear = SimpleRidge::new(linear_alpha);
+        linear.fit(&X_train_scaled, &y_train)?;
+        self.linear_model = Some(linear);
+
+        self.is_trained = true;
+
+        // Оценка качества (опционально, для логирования)
+        if let (Some(ref tree), Some(ref linear)) = (&self.tree_model, &self.linear_model) {
+            let tree_pred = tree.predict(&X_test_scaled)?;
+            let linear_pred = linear.predict(&X_test_scaled)?;
+
+            // Ensemble
+            let ensemble_pred: Array1<f64> = tree_pred * 0.7 + linear_pred * 0.3;
+
+            // MAE
+            let mae = (ensemble_pred - y_test)
+                .mapv(|x| x.abs())
+                .mean()
+                .unwrap_or(0.0);
+            tracing::info!("Forecasting model trained (opts: linear_alpha={}, tree_max_depth={}, min_samples_split={}). MAE: {:.2}", linear_alpha, tree_max_depth, min_samples_split, mae);
         }
 
         Ok(())

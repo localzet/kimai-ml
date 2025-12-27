@@ -83,7 +83,37 @@ async fn predict(
         data.timesheets.len()
     );
 
-    let weeks: Vec<kimai_ml::types::WeekData> = data
+    // Read optional model choice and other options from payload options
+    let model_choice = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("model"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let include_weekends = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("include_weekends"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    let window_size_opt = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("window_size"))
+        .and_then(|v| v.as_i64())
+        .map(|v| v as usize);
+
+    let confidence_threshold = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("confidence_threshold"))
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
+
+    // Build weeks vector and apply window_size if present
+    let mut weeks: Vec<kimai_ml::types::WeekData> = data
         .weeks
         .iter()
         .map(|w| kimai_ml::types::WeekData {
@@ -104,15 +134,13 @@ async fn predict(
         })
         .collect();
 
-    let mut model = state.forecasting_model.lock().await;
+    if let Some(ws) = window_size_opt {
+        if weeks.len() > ws {
+            weeks = weeks.split_off(weeks.len() - ws);
+        }
+    }
 
-    // Read optional model choice from payload options
-    let model_choice = data
-        .options
-        .as_ref()
-        .and_then(|o| o.get("model"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
+    let mut model = state.forecasting_model.lock().await;
 
     if weeks.len() < 8 {
         let avg_hours = if weeks.is_empty() {
@@ -148,7 +176,7 @@ async fn predict(
     }
 
     // Обучение (если еще не обучена)
-    if let Err(e) = model.train(&weeks) {
+    if let Err(e) = model.train_with_options(&weeks, data.options.as_ref()) {
         tracing::warn!("Training failed: {}", e);
     }
 
@@ -182,6 +210,7 @@ async fn predict(
         }
     }
 
+    // No further structural filtering for forecasting; return
     Ok(Json(MLOutputData {
         forecasting: Some(forecasting_result),
         anomalies: None,
@@ -208,6 +237,21 @@ async fn detect_anomalies(
         }));
     }
 
+    // Read options
+    let include_weekends = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("include_weekends"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    let confidence_threshold = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("confidence_threshold"))
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
+
     let entries: Vec<kimai_ml::types::TimesheetEntry> = data
         .timesheets
         .iter()
@@ -228,6 +272,13 @@ async fn detect_anomalies(
             month: e.month,
             year: e.year,
         })
+        .filter(|e| {
+            if include_weekends {
+                true
+            } else {
+                !(e.day_of_week == 0 || e.day_of_week == 6)
+            }
+        })
         .collect();
 
     let mut detector = state.anomaly_detector.lock().await;
@@ -239,12 +290,17 @@ async fn detect_anomalies(
     }
 
     match detector.detect(&entries) {
-        Ok(anomalies) => Ok(Json(MLOutputData {
-            forecasting: None,
-            anomalies: Some(anomalies),
-            recommendations: None,
-            productivity: None,
-        })),
+        Ok(mut anomalies) => {
+            if confidence_threshold > 0.0 {
+                anomalies.retain(|a| a.score >= confidence_threshold);
+            }
+            Ok(Json(MLOutputData {
+                forecasting: None,
+                anomalies: Some(anomalies),
+                recommendations: None,
+                productivity: None,
+            }))
+        }
         Err(e) => Err(format!("Detection error: {}", e)),
     }
 }
@@ -256,7 +312,18 @@ async fn get_recommendations(
     tracing::info!("Recommendations request: {} projects", data.projects.len());
 
     let mut engine = state.recommendation_engine.lock().await;
-    let recommendations = engine.generate_recommendations(&data);
+    let mut recommendations = engine.generate_recommendations(&data);
+
+    let confidence_threshold = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("confidence_threshold"))
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
+
+    if confidence_threshold > 0.0 {
+        recommendations.retain(|r| r.confidence >= confidence_threshold);
+    }
 
     Ok(Json(MLOutputData {
         forecasting: None,
@@ -279,6 +346,13 @@ async fn analyze_productivity(
         return Err("No timesheet entries provided".to_string());
     }
 
+    let include_weekends = data
+        .options
+        .as_ref()
+        .and_then(|o| o.get("include_weekends"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
     let entries: Vec<kimai_ml::types::TimesheetEntry> = data
         .timesheets
         .iter()
@@ -298,6 +372,13 @@ async fn analyze_productivity(
             week_of_year: e.week_of_year,
             month: e.month,
             year: e.year,
+        })
+        .filter(|e| {
+            if include_weekends {
+                true
+            } else {
+                !(e.day_of_week == 0 || e.day_of_week == 6)
+            }
         })
         .collect();
 
